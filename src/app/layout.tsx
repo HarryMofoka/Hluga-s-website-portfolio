@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   description:
     "HLUGA. — the portfolio of Lehlohonolo Mofokeng, a frontend developer in Johannesburg building fast, accessible and animated web experiences.",
   authors: [{ name: "Lehlohonolo Mofokeng" }],
+  icons: {
+    icon: "https://framerusercontent.com/images/VMcS7YYTM5PXfXvlHc9u3hSCMM.svg",
+  },
   openGraph: {
     type: "website",
   },
@@ -24,6 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="hluga">
       <head>
+        <link rel="icon" href="https://framerusercontent.com/images/VMcS7YYTM5PXfXvlHc9u3hSCMM.svg" type="image/svg+xml" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
