@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "@/styles.css";
 import { SiteNav } from "@/components/SiteNav";
 import { SplashScreen } from "@/components/SplashScreen";
+import { CMSProvider } from "@/context/CMSContext";
 
 export const metadata: Metadata = {
   title: "Lehlohonolo Mofokeng — Frontend Developer in Johannesburg",
@@ -36,9 +37,11 @@ export default function RootLayout({
         />
       </head>
       <body className="hluga">
-        <SplashScreen />
-        <SiteNav />
-        {children}
+        <CMSProvider>
+          <SplashScreen />
+          <SiteNav />
+          {children}
+        </CMSProvider>
       </body>
     </html>
   );

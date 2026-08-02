@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { profile } from "@/data/portfolio";
 import { ArrowIcon } from "./CtaButton";
+import { useCMS } from "@/context/CMSContext";
 
 const links = [
   { href: "/", label: "Home" },
@@ -13,15 +13,22 @@ const links = [
   { href: "/about", label: "About" },
   { href: "/experience", label: "Experience" },
   { href: "/contact", label: "Contact" },
+  { href: "/cms", label: "CMS Platform" },
 ] as const;
 
 export function SiteNav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { config } = useCMS();
+  const profile = config.profile;
 
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
+
+  if (pathname?.startsWith("/cms")) {
+    return null; // Hide site nav when inside full CMS platform
+  }
 
   return (
     <>
@@ -66,9 +73,11 @@ export function SiteNav() {
             {profile.email}
           </a>
           <div className="menu-socials">
-            <a href="#">GitHub</a>
-            <a href="#">LinkedIn</a>
-            <a href="#">CodePen</a>
+            {config.socials?.map((s) => (
+              <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer">
+                {s.label}
+              </a>
+            ))}
           </div>
         </div>
         <div style={{ marginTop: 32 }}>

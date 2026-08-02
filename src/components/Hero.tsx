@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import { profile } from "@/data/portfolio";
 import { CtaButton } from "./CtaButton";
+import { useCMS } from "@/context/CMSContext";
 
 const BASE_IMG =
   "https://soft-zoom-63098134.figma.site/_assets/v11/5c9f982199fde1d9b85a20e5396f0fa7bacaf9a3.png?w=2560";
@@ -12,6 +12,9 @@ const REVEAL_IMG =
 const SPOTLIGHT_R = 260;
 
 export function Hero() {
+  const { config } = useCMS();
+  const profile = config.profile;
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const revealRef = useRef<HTMLDivElement>(null);
 
@@ -81,12 +84,12 @@ export function Hero() {
     };
   }, []);
 
-  const words = profile.headline.split(" ");
+  const words = (profile?.headline || "Building modern web experiences.").split(" ");
 
   return (
     <main className="hero">
       <div className="hero-big-text creator-text-animate">
-        <h2>{profile.brand}</h2>
+        <h2>{profile?.brand || "HLUGA."}</h2>
       </div>
 
       <div
