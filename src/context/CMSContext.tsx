@@ -8,6 +8,9 @@ interface CMSContextType {
   config: CMSConfig;
   updateConfig: (updated: Partial<CMSConfig>) => void;
   publishToGit: (commitMessage: string) => Promise<void>;
+  isAuthenticated: boolean;
+  login: (passkey: string) => Promise<boolean>;
+  logout: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -17,32 +20,65 @@ const LOCAL_STORAGE_KEY = "hluga_cms_config_v1";
 
 export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [config, setConfig] = useState<CMSConfig>(defaultCMSConfig);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load configuration from local storage & API
+  // Check Auth & Fetch CMS Data
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setConfig((prev) => ({ ...prev, ...parsed }));
-      }
-    } catch (e) {
-      console.warn("Could not read local CMS config", e);
-    } finally {
-      setIsLoading(false);
-    }
-
-    // Also attempt server sync
-    fetch("/api/cms")
+    // Auth Check
+    fetch("/api/cms/auth")
       .then((res) => res.json())
       .then((data) => {
-        if (data && data.config) {
-          setConfig((prev) => ({ ...prev, ...data.config }));
-          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data.config));
+        setIsAuthenticated(!!data.authenticated);
+      })
+      .catch(() => {});
+
+    // Data Hydration from Server REST API
+    fetch("/api/cms/content")
+      .then((res) => res.json())
+      .then((serverData) => {
+        if (serverData && !serverData.error) {
+          setConfig((prev) => ({
+            ...prev,
+            profile: serverData.profile || prev.profile,
+            projects: serverData.projects || prev.projects,
+            services: serverData.services || prev.services,
+            experiences: serverData.experiences || prev.experiences,
+            socials: serverData.socials || prev.socials,
+            stats: serverData.stats || prev.stats,
+          }));
         }
       })
       .catch(() => {});
+
+    // Fetch theme & sections
+    fetch("/api/cms/theme")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.theme) {
+          setConfig((prev) => ({ ...prev, theme: data.theme }));
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/cms/sections")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.sections) {
+          setConfig((prev) => ({ ...prev, sections: data.sections }));
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/cms/analytics")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.analytics) {
+          setConfig((prev) => ({ ...prev, analytics: data.analytics }));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
   }, []);
 
   // Apply theme variables dynamically to DOM root
@@ -57,6 +93,28 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     root.style.setProperty("--hl-accent", config.theme.accent);
   }, [config.theme]);
 
+  const login = async (passkey: string): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/cms/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passkey }),
+      });
+      if (res.ok) {
+        setIsAuthenticated(true);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const logout = async () => {
+    await fetch("/api/cms/auth", { method: "DELETE" }).catch(() => {});
+    setIsAuthenticated(false);
+  };
+
   const updateConfig = (updatedPartial: Partial<CMSConfig>) => {
     setConfig((prev) => {
       const nextConfig = { ...prev, ...updatedPartial };
@@ -66,22 +124,22 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.error(e);
       }
 
-      // Persist to disk API asynchronously
-      fetch("/api/cms", {
+      // Persist to REST API server
+      fetch("/api/cms/content", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ config: nextConfig }),
-      }).catch((e) => console.warn("Failed to persist to API server", e));
+      }).catch((e) => console.warn("Failed to persist content to API server", e));
 
       return nextConfig;
     });
   };
 
   const publishToGit = async (commitMessage: string) => {
-    const res = await fetch("/api/cms", {
+    const res = await fetch("/api/cms/git", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "git_commit", commitMessage, config }),
+      body: JSON.stringify({ commitMessage, config }),
     });
 
     if (!res.ok) {
@@ -91,7 +149,17 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   return (
-    <CMSContext.Provider value={{ config, updateConfig, publishToGit, isLoading }}>
+    <CMSContext.Provider
+      value={{
+        config,
+        updateConfig,
+        publishToGit,
+        isAuthenticated,
+        login,
+        logout,
+        isLoading,
+      }}
+    >
       {children}
     </CMSContext.Provider>
   );
